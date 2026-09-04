@@ -1,0 +1,5 @@
+# Core dependencies (Standard library is primarily used for zero-dependency portability)
+pytest>=8.0.0
+
+# Optional: Google GenAI SDK (if not using direct REST API)
+# google-genai>=0.1.1
