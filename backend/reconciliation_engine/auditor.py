@@ -104,9 +104,15 @@ class Auditor:
         reported_net = self._to_decimal(raw.get("reported_net", "0.00"))
         ledger_net = self._to_decimal(raw.get("ledger_net", "0.00"))
 
-        expected_net, discrepancy_payout, payout_math_ok = self.verify_net_payout(
-            gross, mdr, gst, reported_net
-        )
+        if inv_result.is_refunded:
+            # Refunds have negative gross and zero fees — skip payout math check
+            expected_net = gross
+            discrepancy_payout = Decimal("0.00")
+            payout_math_ok = True
+        else:
+            expected_net, discrepancy_payout, payout_math_ok = self.verify_net_payout(
+                gross, mdr, gst, reported_net
+            )
 
         # Ledger Net Verification (if ledger record exists)
         if inv_result.ledger_records:

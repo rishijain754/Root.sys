@@ -1497,14 +1497,7 @@ function sendMessage() {
 
     showTyping();
 
-
-    setTimeout(() => {
-
-        removeTyping();
-
-        processMessage(text);
-
-    }, 700);
+    processMessage(text);
 
 }
 
@@ -1519,374 +1512,97 @@ function quickTopic(topic) {
 
     showTyping();
 
-    setTimeout(() => {
+    processMessage(topic);
 
+}
+
+
+/* =========================================================
+   PROCESS CUSTOMER MESSAGE (CONNECTED TO BACKEND API)
+========================================================= */
+
+async function processMessage(text) {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/v1/reconcile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: text })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
         removeTyping();
-
-        processMessage(topic);
-
-    }, 600);
-
+        
+        if (data.response_type === 'HUMAN_HANDOFF') {
+             const cardHTML = `
+               <div style="border:1px solid #c084fc;border-radius:var(--radius-sm);overflow:hidden;margin-top:6px;background:white;box-shadow:var(--shadow-sm);">
+                 <div style="background:#faf5ff;padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e9d5ff;">
+                   <span style="font-size:18px;">📞</span>
+                   <strong style="color:#7e22ce;font-size:13px;">Support Connection</strong>
+                 </div>
+                 <div style="padding:14px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;">
+                   <p style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:4px;">${escapeHTML(data.message)}</p>
+                   <a href="mailto:support@settleassist.com" style="display:inline-block;padding:10px 16px;background:#9333ea;color:white;text-decoration:none;font-size:12px;font-weight:600;border-radius:8px;transition:0.2s;">Contact Support Team</a>
+                 </div>
+               </div>`;
+             addBotMessage(cardHTML);
+        } else if (data.message) {
+             addBotMessage(data.message.replace(/\n/g, '<br>'));
+        } else if (data.payload) {
+             const inv = data.payload.investigation_summary || {};
+             const fin = data.payload.financial_audit || {};
+             const cardHTML = `
+               <div style="border:1px solid var(--danger);border-radius:var(--radius-sm);overflow:hidden;margin-top:6px;">
+                 <div style="background:var(--danger-bg);padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #fecaca;">
+                   <span style="font-size:16px;">⚠️</span>
+                   <strong style="color:var(--danger);font-size:13px;">FinOps Escalation Required</strong>
+                   <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);font-weight:600;">${escapeHTML(data.payload.escalation_tier || '')}</span>
+                 </div>
+                 <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                     <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
+                       <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;">Order ID</span>
+                       <strong style="font-size:11px;font-family:monospace;">${escapeHTML(inv.order_id || 'N/A')}</strong>
+                     </div>
+                     <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
+                       <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;">Payment ID</span>
+                       <strong style="font-size:11px;font-family:monospace;">${escapeHTML(inv.payment_id || 'N/A')}</strong>
+                     </div>
+                   </div>
+                   <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
+                     <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Failure Stage</span>
+                     <span style="font-size:11px;font-weight:600;color:var(--warning);">${escapeHTML(inv.failure_stage || 'UNKNOWN')}</span>
+                   </div>
+                   <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
+                     <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Root Cause</span>
+                     <span style="font-size:11px;line-height:1.5;">${escapeHTML(inv.root_cause || data.payload.investigation_summary?.root_cause || 'See audit log')}</span>
+                   </div>
+                   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;">
+                     <span style="font-size:9px;color:var(--primary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;font-weight:700;">Recommended Action</span>
+                     <span style="font-size:11px;line-height:1.5;">${escapeHTML(data.payload.recommended_action || 'Contact FinOps team')}</span>
+                   </div>
+                 </div>
+               </div>`;
+             addBotMessage("Our system has flagged this transaction for specialist review. Here are the details:", []);
+             const lastRow = messages.lastElementChild;
+             if (lastRow) lastRow.querySelector('.bot-message').insertAdjacentHTML('beforeend', cardHTML);
+        } else if (data.error) {
+             addBotMessage(`Error: ${data.error}`);
+        } else {
+             addBotMessage(JSON.stringify(data));
+        }
+    } catch (e) {
+        removeTyping();
+        addBotMessage("Sorry, I couldn't reach the backend server. Please make sure it's running.");
+        console.error("Backend error:", e);
+    }
 }
 
-
-/* =========================================================
-   PROCESS CUSTOMER MESSAGE
-========================================================= */
-
-function processMessage(text) {
-
-    const query =
-        text.toLowerCase();
-
-
-    /* -----------------------------------------------------
-       TRANSACTION ID FLOW
-    ----------------------------------------------------- */
-
-    if (awaitingTransactionId) {
-
-        awaitingTransactionId = false;
-
-        showTransactionResult(text);
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       MISSING / DELAYED SETTLEMENT
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("settlement hasn't") ||
-        query.includes("settlement has not") ||
-        query.includes("missing settlement") ||
-        query.includes("not arrived") ||
-        query.includes("delayed") ||
-        query.includes("where is my money") ||
-        query.includes("where is my settlement")
-    ) {
-
-        awaitingTransactionId = true;
-
-        addBotMessage(
-            `
-I can check that for you.
-
-Please share your <strong>Payment ID, Transaction ID,
-Order ID or Settlement Reference</strong>.
-
-Once you provide it, I'll check the current status and
-expected settlement timeline.
-            `
-        );
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       CHECK TRANSACTION
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("check transaction") ||
-        query.includes("transaction status") ||
-        query.includes("check my transaction")
-    ) {
-
-        awaitingTransactionId = true;
-
-        addBotMessage(
-            `
-Sure! Please send me your
-<strong>Payment ID, Transaction ID or Order ID</strong>.
-
-For example:
-
-<strong>PAY_8XK72A91</strong>
-            `
-        );
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       AMOUNT DIFFERENCE
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("amount") ||
-        query.includes("less") ||
-        query.includes("different amount") ||
-        query.includes("deduction")
-    ) {
-
-        addBotMessage(
-            `
-Settlement amounts can sometimes differ from the original
-payment amount because of legitimate adjustments.
-
-For example:
-
-<strong>Gross payment</strong> → ₹25,000<br>
-<strong>Processing fees</strong> → − ₹500<br>
-<strong>Expected settlement</strong> → ₹24,500
-
-Other factors can include refunds, reversals or adjustments.
-
-If you'd like, I can check a specific transaction.
-            `,
-            [
-                "Check a transaction",
-                "Why was money deducted?"
-            ]
-        );
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       BANK CREDIT MISSING
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("bank") ||
-        query.includes("credited") ||
-        query.includes("credit missing") ||
-        query.includes("bank account")
-    ) {
-
-        addBotMessage(
-            `
-I understand. Sometimes a settlement can be marked as
-processed while the bank credit is still pending confirmation.
-
-This does <strong>not automatically mean the settlement has
-failed</strong>.
-
-Please share your Payment ID or Settlement Reference and
-I'll check the available transaction status.
-            `
-        );
-
-        awaitingTransactionId = true;
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       HUMAN SUPPORT
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("human") ||
-        query.includes("agent") ||
-        query.includes("contact support") ||
-        query.includes("talk to support")
-    ) {
-
-        addBotMessage(
-            `
-Of course.
-
-Before connecting you with a support specialist, I can collect
-the details of your settlement issue so the team has the
-necessary context.
-
-Please provide your transaction or settlement reference.
-            `
-        );
-
-        awaitingTransactionId = true;
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       GREETING
-    ----------------------------------------------------- */
-
-    if (
-        query.includes("hello") ||
-        query.includes("hi") ||
-        query.includes("hey")
-    ) {
-
-        addBotMessage(
-            `
-Hello! 👋
-
-How can I help you with your payment or settlement today?
-            `,
-            [
-                "My settlement hasn't arrived",
-                "Check a transaction",
-                "Amount difference"
-            ]
-        );
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       DEFAULT
-    ----------------------------------------------------- */
-
-    addBotMessage(
-        `
-I can help you with settlement-related questions.
-
-You can ask me things like:
-
-• Where is my settlement?<br>
-• Check my transaction status<br>
-• Why is my settlement delayed?<br>
-• Why is my settlement amount different?<br>
-• My bank credit is missing
-
-What would you like help with?
-        `,
-        [
-            "My settlement hasn't arrived",
-            "Check a transaction",
-            "Amount difference"
-        ]
-    );
-
-}
-
-
-/* =========================================================
-   TRANSACTION RESULT
-========================================================= */
-
-function showTransactionResult(transactionId) {
-
-    addBotMessage(
-        `
-I've checked the transaction.
-
-Here is the current information available for
-<strong>${escapeHTML(transactionId)}</strong>.
-        `
-    );
-
-
-    const card =
-        document.createElement("div");
-
-    card.className =
-        "transaction-card";
-
-    card.innerHTML = `
-
-        <div class="transaction-card-header">
-
-            <div>
-
-                <h3>
-                    Transaction status
-                </h3>
-
-                <div class="reference">
-                    ${escapeHTML(transactionId)}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="status-grid">
-
-            <div class="status-box">
-
-                <span>
-                    Payment
-                </span>
-
-                <strong style="color:#16a34a">
-                    ✓ Successful
-                </strong>
-
-            </div>
-
-
-            <div class="status-box">
-
-                <span>
-                    Settlement
-                </span>
-
-                <strong style="color:#d97706">
-                    ◷ Processing
-                </strong>
-
-            </div>
-
-
-            <div class="status-box">
-
-                <span>
-                    Expected by
-                </span>
-
-                <strong>
-                    05 Sep 2026
-                </strong>
-
-            </div>
-
-        </div>
-
-    `;
-
-    messages.appendChild(card);
-
-    scrollMessages();
-
-
-    setTimeout(() => {
-
-        addBotMessage(
-            `
-Your payment was successfully processed.
-
-Your settlement is currently being processed and is expected
-according to the applicable settlement timeline.
-
-At the moment, we do not have confirmation that the funds have
-been credited to your bank account.
-
-<strong>This does not necessarily mean that the settlement has
-failed.</strong> It may still be processing.
-
-Would you like me to explain what you can do next?
-            `,
-            [
-                "Why is it delayed?",
-                "When will I receive it?",
-                "Contact support"
-            ]
-        );
-
-    }, 500);
-
-}
 
 
 /* =========================================================

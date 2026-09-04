@@ -61,6 +61,20 @@ class ReconciliationOrchestrator:
         confidence_score, and the formatted payload.
         """
         curr_time = simulated_current_time or datetime.datetime(2026, 9, 4, 18, 0, 0)
+        
+        # Check for human handoff intent first
+        query_lower = query_text.lower()
+        handoff_keywords = ["human", "agent", "real person", "talk to", "speak to", "contact support", "connect me", "customer care", "support team"]
+        if any(kw in query_lower for kw in handoff_keywords):
+            return {
+                "response_type": "HUMAN_HANDOFF",
+                "confidence_score": 100,
+                "message": (
+                    "I understand you'd like to speak with a human support agent. "
+                    "I'm connecting you to our FinOps support team who can assist you further."
+                )
+            }
+
         ids = self.extract_identifiers(query_text)
 
         # Step 1: Query Execution via Investigator
@@ -151,11 +165,11 @@ class ReconciliationOrchestrator:
         if inv.is_failed or "GATEWAY_PAYMENT_FAILED" in inv.missing_links:
             return 100 # Confidently identified as failed at gateway
 
-        if not audit.math_verified or audit.discrepancy_payout > Decimal("0.00"):
-            return 60 # Math mismatch detected
-
         if inv.is_refunded:
             return 100 # Fully tracked refund flow
+
+        if not audit.math_verified or audit.discrepancy_payout > Decimal("0.00"):
+            return 60 # Math mismatch detected
 
         if inv.lifecycle_stage == "SETTLED" and not inv.missing_links:
             return 100 # Fully settled happy path
