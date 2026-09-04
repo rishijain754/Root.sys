@@ -18,19 +18,19 @@ SettleAssist provides a comprehensive backend and an intuitive frontend interfac
 
 The repository is structured into distinct, decoupled modules:
 
-### 1. Backend (`/backend`)
+### 1. Backend 
 The core API server built to handle production-scale transaction ingestion and AI reconciliation.
 - Provides endpoints for data syncing, health checking, and live data streaming.
 - Manages an integrated SQLite database for efficient local processing and query handling.
 - Powered by an advanced language model agent tailored for settlement operations.
 
-### 2. Machine Learning Pipeline (`/new model`)
+### 2. Machine Learning Pipeline 
 A robust predictive suite that enhances settlement expectations.
 - Predicts settlement delays and evaluates the health of the settlement process.
 - Features empirical calibration across different banking rails (NEFT, RTGS, IMPS, UPI).
 - Employs trained models with high accuracy to minimize human intervention in exception handling.
 
-### 3. Frontend (`/frontend`)
+### 3. Frontend 
 The user-facing portal that interacts with the backend.
 - Provides a responsive workspace for support agents to chat with the AI and track transaction lifecycles.
 - Seamlessly integrates with the backend APIs to display real-time statuses and predictions.
