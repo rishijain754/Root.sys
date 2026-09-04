@@ -79,8 +79,8 @@ class SettlementLLMAgent:
         # Step 1: Deterministic Engine Data Extraction & Lineage Audit
         base_result = self.orchestrator.process_query(query)
 
-        # If no API key is configured, return the deterministic result
-        if not effective_key:
+        # If no API key is configured, or if it's a deliberate human handoff/escalation, return directly
+        if not effective_key or base_result.get("response_type") == "HUMAN_HANDOFF":
             return {
                 **base_result,
                 "ai_model": "Deterministic FinOps Engine (Add GEMINI_API_KEY in .env for Gemini AI Support)",
