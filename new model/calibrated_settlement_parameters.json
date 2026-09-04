@@ -1,0 +1,158 @@
+{
+  "timestamp": "2026-09-04T20:09:52.723913+00:00",
+  "dataset": "Razorpay Indian Payment Gateway & Settlement Batches",
+  "training_samples": 40000,
+  "test_samples": 10000,
+  "calibration_matrix": {
+    "NEFT": {
+      "T+1": {
+        "sample_count": 5141,
+        "normal_median_hours": 37.0,
+        "normal_p95_hours": 40.0,
+        "holiday_rollover_median_hours": 63.0,
+        "holiday_rollover_p95_hours": 87.0
+      },
+      "T+2": {
+        "sample_count": 5615,
+        "normal_median_hours": 61.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 88.0,
+        "holiday_rollover_p95_hours": 112.0
+      },
+      "T+3": {
+        "sample_count": 1011,
+        "normal_median_hours": 61.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 87.0,
+        "holiday_rollover_p95_hours": 111.0
+      }
+    },
+    "RTGS": {
+      "T+1": {
+        "sample_count": 3977,
+        "normal_median_hours": 37.0,
+        "normal_p95_hours": 40.0,
+        "holiday_rollover_median_hours": 63.0,
+        "holiday_rollover_p95_hours": 88.0
+      },
+      "T+2": {
+        "sample_count": 4142,
+        "normal_median_hours": 61.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 88.0,
+        "holiday_rollover_p95_hours": 112.0
+      },
+      "T+3": {
+        "sample_count": 784,
+        "normal_median_hours": 61.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 88.0,
+        "holiday_rollover_p95_hours": 112.0
+      }
+    },
+    "IMPS": {
+      "T+1": {
+        "sample_count": 2635,
+        "normal_median_hours": 36.0,
+        "normal_p95_hours": 40.0,
+        "holiday_rollover_median_hours": 62.0,
+        "holiday_rollover_p95_hours": 87.0
+      },
+      "T+2": {
+        "sample_count": 2781,
+        "normal_median_hours": 60.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 86.0,
+        "holiday_rollover_p95_hours": 112.0
+      },
+      "T+3": {
+        "sample_count": 557,
+        "normal_median_hours": 60.0,
+        "normal_p95_hours": 64.0,
+        "holiday_rollover_median_hours": 87.0,
+        "holiday_rollover_p95_hours": 112.0
+      }
+    },
+    "UPI_PAYOUT": {
+      "T+1": {
+        "sample_count": 397,
+        "normal_median_hours": 0.14166666666666666,
+        "normal_p95_hours": 0.25,
+        "holiday_rollover_median_hours": 0.11666666666666667,
+        "holiday_rollover_p95_hours": 0.23333333333333334
+      },
+      "T+2": {
+        "sample_count": 507,
+        "normal_median_hours": 0.15,
+        "normal_p95_hours": 0.25,
+        "holiday_rollover_median_hours": 0.13333333333333333,
+        "holiday_rollover_p95_hours": 0.25
+      },
+      "T+3": {
+        "sample_count": 70,
+        "normal_median_hours": 0.15,
+        "normal_p95_hours": 0.22999999999999995,
+        "holiday_rollover_median_hours": 0.11666666666666667,
+        "holiday_rollover_p95_hours": 0.22666666666666657
+      }
+    }
+  },
+  "classification_metrics": {
+    "accuracy": 0.8589,
+    "macro_f1": 0.673065083199947,
+    "weighted_f1": 0.8259695717351043,
+    "class_reports": {
+      "FAILED": {
+        "precision": 0.6348228043143297,
+        "recall": 0.4287200832466181,
+        "f1-score": 0.5118012422360249,
+        "support": 961.0
+      },
+      "LEGITIMATELY_DELAYED": {
+        "precision": 0.9182250396196513,
+        "recall": 0.9243777919591576,
+        "f1-score": 0.92129114326602,
+        "support": 3134.0
+      },
+      "ON_TIME_SETTLED": {
+        "precision": 0.8371799495131627,
+        "recall": 0.99763644177052,
+        "f1-score": 0.9103921568627451,
+        "support": 4654.0
+      },
+      "OTHER_RECOVERY": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 630.0
+      },
+      "SLA_BREACHED": {
+        "precision": 0.35,
+        "recall": 0.011272141706924315,
+        "f1-score": 0.0218408736349454,
+        "support": 621.0
+      }
+    }
+  },
+  "regression_metrics": {
+    "mae_hours": 7.1698397855517255,
+    "rmse_hours": 12.75961384548746,
+    "r2_score": 0.7696234430885167
+  },
+  "features": [
+    "method",
+    "clearing_rail",
+    "settlement_cycle",
+    "log_amount",
+    "hour_ist",
+    "day_of_week",
+    "is_second_or_fourth_saturday",
+    "is_sunday",
+    "is_weekend_closure",
+    "is_rbi_holiday",
+    "is_post_16_cutoff",
+    "is_post_21_cutoff",
+    "hours_to_16_cutoff",
+    "is_holiday_rollover"
+  ]
+}
