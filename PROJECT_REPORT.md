@@ -1,10 +1,10 @@
 # Project Report & Technical Documentation
-## SettleAssist: Fintech Settlement AI Engine
+## Setu: Fintech Settlement AI Engine
 
 ---
 
 ## 1. Executive Summary
-SettleAssist is an autonomous, AI-driven reconciliation and settlement engine designed to resolve the traditional bottlenecks in financial operations (FinOps). By combining a high-concurrency dynamic REST API, real-time data streaming, and advanced machine learning models, the system can predict settlement delays and evaluate transaction health. Furthermore, it offers a natural language interface for support agents, drastically reducing the manual effort required to trace missing payouts or reconcile ledgers.
+Setu is an autonomous, AI-driven reconciliation and settlement engine designed to resolve the traditional bottlenecks in financial operations (FinOps). By combining a high-concurrency dynamic REST API, real-time data streaming, and advanced machine learning models, the system can predict settlement delays and evaluate transaction health. Furthermore, it offers a natural language interface for support agents, drastically reducing the manual effort required to trace missing payouts or reconcile ledgers.
 
 ## 2. Problem Statement
 In the fintech ecosystem, the reconciliation of transactions—matching merchant orders, gateway payments, and final bank settlements—is traditionally a batch-oriented, error-prone, and highly manual process. When exceptions occur (such as delayed settlements, broken data lineages, or bank holidays affecting clearing), support agents must dig through multiple databases and spreadsheets to find answers. This leads to:
@@ -13,7 +13,7 @@ In the fintech ecosystem, the reconciliation of transactions—matching merchant
 - Difficulty in accurately predicting when a delayed payment will finally settle.
 
 ## 3. Solution Architecture
-SettleAssist solves these challenges by providing a unified, real-time, AI-assisted platform. The architecture is completely decoupled into three core domains:
+Setu solves these challenges by providing a unified, real-time, AI-assisted platform. The architecture is completely decoupled into three core domains:
 
 ### 3.1 Autonomous AI Engine & Backend Server
 - **Core Technology:** Python-based `HTTPServer` requiring zero external framework dependencies, ensuring high portability.
@@ -41,7 +41,7 @@ The backend exposes a RESTful API versioned at `/api/v1/`. Key endpoints include
 - `GET /docs`: Serves auto-generated, interactive Swagger-style documentation.
 
 ### Data Ingestion & Syncing
-SettleAssist features a robust data re-hydration mechanism. The `rebuild_linked_database.py` script can ingest millions of records from flat CSV files into the SQLite relational model. Furthermore, the backend supports hot-reloading; it can dynamically listen for updates to these files or accept live webhook events to keep the local database synchronized with the payment gateway.
+Setu features a robust data re-hydration mechanism. The `rebuild_linked_database.py` script can ingest millions of records from flat CSV files into the SQLite relational model. Furthermore, the backend supports hot-reloading; it can dynamically listen for updates to these files or accept live webhook events to keep the local database synchronized with the payment gateway.
 
 ### Machine Learning Feature Engineering
 The ML predictor (`ml_predictor.py`) processes raw transaction timestamps and amounts, engineering them into time-series features. It accounts for:
@@ -55,4 +55,4 @@ While currently optimized for local execution and portability via SQLite, the ar
 - **Database Migration:** The data layer abstracts the underlying SQL execution. For enterprise deployment, the SQLite file can be seamlessly replaced with a distributed PostgreSQL cluster.
 
 ## 6. Conclusion
-SettleAssist demonstrates a forward-thinking approach to FinOps. By offloading the investigative heavy lifting to an AI agent and providing predictive insights via Machine Learning, financial teams can transition from reactive troubleshooting to proactive exception management.
+Setu demonstrates a forward-thinking approach to FinOps. By offloading the investigative heavy lifting to an AI agent and providing predictive insights via Machine Learning, financial teams can transition from reactive troubleshooting to proactive exception management.
