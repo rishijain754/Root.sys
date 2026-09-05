@@ -1,0 +1,9 @@
+.git
+.vscode
+__pycache__
+*.pyc
+start.bat
+verify_fixes.py
+find_orders.py
+build_app.py
+setup_vercel.py

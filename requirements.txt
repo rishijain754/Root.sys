@@ -1,0 +1,2 @@
+# Standard library modules only - optional dependencies below
+# google-genai

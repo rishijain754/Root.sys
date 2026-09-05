@@ -1,10 +1,10 @@
-# Setu: Fintech Settlement AI Engine
+# SettleAssist: Fintech Settlement AI Engine
 
-Welcome to Setu, a production-ready, autonomous AI engine designed to revolutionize fintech reconciliation and settlement operations. This platform combines a high-concurrency dynamic REST API, real-time data streaming, and advanced machine learning to predict, manage, and resolve settlement exceptions on the fly.
+Welcome to SettleAssist, a production-ready, autonomous AI engine designed to revolutionize fintech reconciliation and settlement operations. This platform combines a high-concurrency dynamic REST API, real-time data streaming, and advanced machine learning to predict, manage, and resolve settlement exceptions on the fly.
 
 ## Project Overview
 
-Setu provides a comprehensive backend and an intuitive frontend interface tailored to streamline financial operations. It acts as an autonomous FinOps assistant, ingesting live transactional data, predicting settlement health, and providing natural language reconciliation through a state-of-the-art AI engine.
+SettleAssist provides a comprehensive backend and an intuitive frontend interface tailored to streamline financial operations. It acts as an autonomous FinOps assistant, ingesting live transactional data, predicting settlement health, and providing natural language reconciliation through a state-of-the-art AI engine.
 
 ## Key Features
 
@@ -42,7 +42,7 @@ To get the system running locally:
 1. Navigate to the `backend` directory.
 2. Install the required dependencies: `pip install -r requirements.txt`.
 3. Start the main API server: `python api_server.py`. 
-4. Open the `index.html` file in the `frontend` directory in your web browser to access the Setu dashboard.
+4. Open the `index.html` file in the `frontend` directory in your web browser to access the SettleAssist dashboard.
 
 ## Technical Stack
 
