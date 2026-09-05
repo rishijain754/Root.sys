@@ -2643,8 +2643,7 @@ body {
                 Settlement Intelligence
 
             </p>
-
-
+            <span id="engineBadge" style="font-size:10px;font-weight:700;color:var(--text-soft);display:inline-block;margin-top:2px;">⚙ Deterministic Engine</span>
         </div>
 
 
@@ -2653,6 +2652,7 @@ body {
 
 
     <div class="header-actions">
+        <button class="header-button" onclick="openApiKeyModal()">AI Settings</button>
 
 
         <button
@@ -3172,1428 +3172,476 @@ body {
 
 <script>
 
+const BACKEND_URL = window.location.origin.startsWith('http') ? window.location.origin : 'http://127.0.0.1:5000';
 
-/* =========================================================
-   DOM
-========================================================= */
-
-const messages =
-    document.getElementById("messages");
-
-const input =
-    document.getElementById("messageInput");
-
-const typing =
-    document.getElementById("typing");
-
-const flowGrid =
-    document.getElementById("flowGrid");
-
-const inputContext =
-    document.getElementById("inputContext");
-
-const contactModal =
-    document.getElementById("contactModal");
-
-const toast =
-    document.getElementById("toast");
-
-const agentName =
-    document.getElementById("agentName");
-
-const agentRole =
-    document.getElementById("agentRole");
-
+const messages = document.getElementById("messages");
+const input = document.getElementById("messageInput");
+const typing = document.getElementById("typing");
+const flowGrid = document.getElementById("flowGrid");
+const inputContext = document.getElementById("inputContext");
+const contactModal = document.getElementById("contactModal");
+const toast = document.getElementById("toast");
+const agentName = document.getElementById("agentName");
+const agentRole = document.getElementById("agentRole");
 
 let investigationMode = null;
-
 let supportMode = false;
-
 let waitingForAgentIssue = false;
 
+input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 110) + "px";
+});
 
-/* =========================================================
-   AUTO RESIZE
-========================================================= */
-
-input.addEventListener(
-    "input",
-    () => {
-
-        input.style.height = "auto";
-
-        input.style.height =
-            Math.min(
-                input.scrollHeight,
-                110
-            ) + "px";
-
+input.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
     }
-);
-
-
-/* =========================================================
-   ENTER
-========================================================= */
-
-<<<<<<< HEAD
-input.addEventListener(
-=======
-function addUserMessage(text) {
-
-    const row =
-        document.createElement("div");
-
-    row.className =
-        "message-row user";
-
-    row.innerHTML = `
-        <div class="message user-message">
-            ${escapeHTML(text)}
-        </div>
-    `;
-
-    messages.appendChild(row);
-
-    scrollMessages();
-
-}
-
-
-/* =========================================================
-   ADD BOT MESSAGE
-========================================================= */
-
-function addBotMessage(text, actions = []) {
-
-    const row =
-        document.createElement("div");
-
-    row.className =
-        "message-row";
-
-    const actionHTML =
-        actions.length > 0
-        ?
-        `
-        <div class="chat-actions">
-            ${actions.map(
-                action => `
-                <button
-                    class="chat-action"
-                    onclick="quickTopic('${action.replace(/'/g, "\\'")}')"
-                >
-                    ${action}
-                </button>
-                `
-            ).join("")}
-        </div>
-        `
-        :
-        "";
-
-
-    row.innerHTML = `
-
-        <div class="message-avatar">
-            ✦
-        </div>
-
-        <div class="message bot-message">
-
-            ${text}
-
-            ${actionHTML}
-
-        </div>
-
-    `;
-
-    messages.appendChild(row);
-
-    scrollMessages();
-
-}
-
-
-/* =========================================================
-   TYPING INDICATOR
-========================================================= */
-
-function showTyping() {
-
-    const row =
-        document.createElement("div");
-
-    row.className =
-        "message-row";
-
-    row.id =
-        "typingRow";
-
-    row.innerHTML = `
-
-        <div class="message-avatar">
-            ✦
-        </div>
-
-        <div class="typing">
-
-            <span></span>
-            <span></span>
-            <span></span>
-
-        </div>
-
-    `;
-
-    messages.appendChild(row);
-
-    scrollMessages();
-
-}
-
-
-function removeTyping() {
-
-    const typing =
-        document.getElementById(
-            "typingRow"
-        );
-
-    if (typing) {
-
-        typing.remove();
-
-    }
-
-}
-
-
-/* =========================================================
-   SCROLL
-========================================================= */
-
-function scrollMessages() {
-
-    setTimeout(() => {
-
-        window.scrollTo({
-
-            top:
-                document.body.scrollHeight,
-
-            behavior:
-                "smooth"
-
-        });
-
-    }, 50);
-
-}
-
-
-/* =========================================================
-   SEND MESSAGE
-========================================================= */
-
-function sendMessage() {
-
-    const text =
-        chatInput.value.trim();
-
-    if (!text) return;
-
-    addUserMessage(text);
-
-    chatInput.value = "";
-
-    showTyping();
-
-    processMessage(text);
-
-}
-
-
-/* =========================================================
-   QUICK TOPIC
-========================================================= */
-
-function quickTopic(topic) {
-
-    addUserMessage(topic);
-
-    showTyping();
-
-    processMessage(topic);
-
-}
-
-
-/* =========================================================
-   PROCESS CUSTOMER MESSAGE (CONNECTED TO BACKEND API)
-========================================================= */
-
-async function processMessage(text) {
-    try {
-        const response = await fetch('http://127.0.0.1:5000/api/v1/reconcile', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query: text })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        removeTyping();
-        
-        if (data.response_type === 'HUMAN_HANDOFF') {
-             const cardHTML = `
-               <div style="border:1px solid #c084fc;border-radius:var(--radius-sm);overflow:hidden;margin-top:6px;background:white;box-shadow:var(--shadow-sm);">
-                 <div style="background:#faf5ff;padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e9d5ff;">
-                   <span style="font-size:18px;">📞</span>
-                   <strong style="color:#7e22ce;font-size:13px;">Support Connection</strong>
-                 </div>
-                 <div style="padding:14px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;">
-                   <p style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:4px;">${escapeHTML(data.message)}</p>
-                   <a href="mailto:support@settleassist.com" style="display:inline-block;padding:10px 16px;background:#9333ea;color:white;text-decoration:none;font-size:12px;font-weight:600;border-radius:8px;transition:0.2s;">Contact Support Team</a>
-                 </div>
-               </div>`;
-             addBotMessage(cardHTML);
-        } else if (data.message) {
-             addBotMessage(data.message.replace(/\n/g, '<br>'));
-        } else if (data.payload) {
-             const inv = data.payload.investigation_summary || {};
-             const fin = data.payload.financial_audit || {};
-             const cardHTML = `
-               <div style="border:1px solid var(--danger);border-radius:var(--radius-sm);overflow:hidden;margin-top:6px;">
-                 <div style="background:var(--danger-bg);padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #fecaca;">
-                   <span style="font-size:16px;">⚠️</span>
-                   <strong style="color:var(--danger);font-size:13px;">FinOps Escalation Required</strong>
-                   <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);font-weight:600;">${escapeHTML(data.payload.escalation_tier || '')}</span>
-                 </div>
-                 <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                     <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
-                       <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;">Order ID</span>
-                       <strong style="font-size:11px;font-family:monospace;">${escapeHTML(inv.order_id || 'N/A')}</strong>
-                     </div>
-                     <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
-                       <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;">Payment ID</span>
-                       <strong style="font-size:11px;font-family:monospace;">${escapeHTML(inv.payment_id || 'N/A')}</strong>
-                     </div>
-                   </div>
-                   <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Failure Stage</span>
-                     <span style="font-size:11px;font-weight:600;color:var(--warning);">${escapeHTML(inv.failure_stage || 'UNKNOWN')}</span>
-                   </div>
-                   <div style="background:var(--surface-soft);border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Root Cause</span>
-                     <span style="font-size:11px;line-height:1.5;">${escapeHTML(inv.root_cause || data.payload.investigation_summary?.root_cause || 'See audit log')}</span>
-                   </div>
-                   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:var(--primary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;font-weight:700;">Recommended Action</span>
-                     <span style="font-size:11px;line-height:1.5;">${escapeHTML(data.payload.recommended_action || 'Contact FinOps team')}</span>
-                   </div>
-                 </div>
-               </div>`;
-             addBotMessage("Our system has flagged this transaction for specialist review. Here are the details:", []);
-             const lastRow = messages.lastElementChild;
-             if (lastRow) lastRow.querySelector('.bot-message').insertAdjacentHTML('beforeend', cardHTML);
-        } else if (data.error) {
-             addBotMessage(`Error: ${data.error}`);
-        } else {
-             addBotMessage(JSON.stringify(data));
-        }
-    } catch (e) {
-        removeTyping();
-        addBotMessage("Sorry, I couldn't reach the backend server. Please make sure it's running.");
-        console.error("Backend error:", e);
-    }
-}
-
-
-
-/* =========================================================
-   MENU
-========================================================= */
-
-function selectMenu(element, type) {
-
-    document
-        .querySelectorAll(".menu-item")
-        .forEach(item => {
-
-            item.classList.remove("active");
-
-        });
-
-
-    element.classList.add("active");
-
-
-    if (type === "transaction") {
-
-        quickTopic(
-            "Check my transaction status"
-        );
-
-    }
-
-
-    if (type === "settlement") {
-
-        quickTopic(
-            "My settlement hasn't arrived"
-        );
-
-    }
-
-
-}
-
-
-/* =========================================================
-   NEW CONVERSATION
-========================================================= */
-
-function newConversation() {
-
-    messages.innerHTML = "";
-
-    awaitingTransactionId = false;
-
-    addBotMessage(
-        `
-Hi! 👋
-
-I'm your <strong>Settlement Support Assistant</strong>.
-
-How can I help you today?
-        `,
-        [
-            "My settlement hasn't arrived",
-            "Check a transaction",
-            "Amount difference",
-            "Contact support"
-        ]
-    );
-
-}
-
-
-/* =========================================================
-   ENTER KEY
-========================================================= */
-
-chatInput.addEventListener(
->>>>>>> parent of cfdf3e7 (updated database and backend)
-    "keydown",
-    event => {
-
-        if (
-            event.key === "Enter" &&
-            !event.shiftKey
-        ) {
-
-            event.preventDefault();
-
-            sendMessage();
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   INVESTIGATION
-========================================================= */
+});
 
 function startInvestigation(mode) {
-
-
     supportMode = false;
-
     waitingForAgentIssue = false;
-
     investigationMode = mode;
 
-
-    flowGrid.style.display =
-        "none";
-
-
-    agentName.textContent =
-        "Anaya";
-
-    agentRole.textContent =
-        "Settlement Intelligence";
-
+    flowGrid.style.display = "none";
+    agentName.textContent = "Anaya";
+    agentRole.textContent = "Settlement Intelligence";
 
     updateActiveNav(mode);
 
-
     const configurations = {
-
         general: {
-
-            message:
-
-                `Let's start with the reference you have.
-
-Enter a Transaction ID, Payment ID,
-Settlement ID or Payout ID.`,
-
-            placeholder:
-
-                "Enter a transaction or settlement reference...",
-
-            context:
-
-                "Provide any available identifier to begin tracing."
-
+            message: "Let's start with the reference you have.\n\nEnter a Transaction ID (e.g. order_d2c_581852), Payment ID (e.g. pay_000110003), or Settlement ID.",
+            placeholder: "Enter transaction ID or settlement reference...",
+            context: "Provide any available identifier to begin tracing."
         },
-
-
         amount: {
-
-            message:
-
-                `Let's investigate the amount difference.
-
-Enter the Transaction ID or Payment ID
-you want to check.`,
-
-            placeholder:
-
-                "Enter Transaction ID or Payment ID...",
-
-            context:
-
-                "SETU will compare gross amount, deductions and expected settlement."
-
+            message: "Let's investigate the amount difference.\n\nEnter the Transaction ID or Payment ID you want to verify.",
+            placeholder: "Enter Transaction ID or Payment ID...",
+            context: "SETU will compare gross amount, MDR deductions, GST, and expected settlement."
         },
-
-
         bank: {
-
-            message:
-
-                `Let's trace the missing bank credit.
-
-Enter a Transaction ID, Settlement ID
-or Payout ID.`,
-
-            placeholder:
-
-                "Enter Transaction, Settlement or Payout ID...",
-
-            context:
-
-                "A bank credit may represent an aggregated payout."
-
+            message: "Let me trace the missing bank credit.\n\nEnter a Transaction ID, Settlement ID or Payout ID.",
+            placeholder: "Enter Transaction, Settlement or Payout ID...",
+            context: "A bank credit may represent an aggregated payout."
         },
-
-
         delay: {
-
-            message:
-
-                `Let's check whether the settlement is actually delayed.
-
-Enter a Transaction ID or Settlement ID.`,
-
-            placeholder:
-
-                "Enter Transaction ID or Settlement ID...",
-
-            context:
-
-                "Expected timing can depend on cutoffs and settlement schedules."
-
+            message: "Let's check whether the settlement is delayed under T+2 SLA.\n\nEnter a Transaction ID or Settlement ID.",
+            placeholder: "Enter Transaction ID or Settlement ID...",
+            context: "SETU will check capture timestamps against bank settlement windows."
         }
-
     };
 
-
-    const config =
-        configurations[mode];
-
-
-    addMessage(
-        config.message,
-        "agent"
-    );
-
-
-    setInputState(
-        config.placeholder,
-        config.context
-    );
-
-
+    const config = configurations[mode] || configurations.general;
+    addMessage(config.message, "agent");
+    setInputState(config.placeholder, config.context);
     input.focus();
-
 }
-
-
-/* =========================================================
-   TALK TO AGENT
-========================================================= */
 
 function startAgentSupport() {
-
-
     investigationMode = null;
-
     supportMode = true;
-
     waitingForAgentIssue = true;
 
+    flowGrid.style.display = "none";
+    document.querySelectorAll(".nav-button").forEach(b => b.classList.remove("active"));
 
-    flowGrid.style.display =
-        "none";
-
-
-    document
-        .querySelectorAll(".nav-button")
-        .forEach(
-            button =>
-                button.classList.remove("active")
-        );
-
-
-    agentName.textContent =
-        "Support Desk";
-
-    agentRole.textContent =
-        "Human support request";
-
+    agentName.textContent = "Support Desk";
+    agentRole.textContent = "Human support request";
 
     addMessage(
-        `Sure. Tell me what happened in your own words.
-
-If you have a transaction, payment, settlement or payout reference, include it as well.
-
-Once I have the issue summary, I'll create a support ticket and provide your callback window.`,
+        "Sure. Tell me what happened in your own words.\n\nIf you have a reference ID, include it as well.\n\nOnce I have the issue summary, I'll create a support ticket and provide your callback window.",
         "agent"
     );
 
-
-    setInputState(
-        "Describe the issue you need help with...",
-        "Your response will be used to prepare a support request."
-    );
-
-
+    setInputState("Describe the issue you need help with...", "Your response will be used to prepare a support request.");
     input.focus();
-
 }
-
-
-/* =========================================================
-   SEND
-========================================================= */
 
 function sendMessage() {
-
-
-    const text =
-        input.value.trim();
-
-
+    const text = input.value.trim();
     if (!text) return;
 
-
-    addMessage(
-        text,
-        "user"
-    );
-
-
+    addMessage(text, "user");
     input.value = "";
+    input.style.height = "28px";
 
-    input.style.height =
-        "28px";
-
-
-    if (
-        supportMode &&
-        waitingForAgentIssue
-    ) {
-
+    if (supportMode && waitingForAgentIssue) {
         createSupportTicket(text);
-
         return;
-
     }
 
-
-    if (
-        investigationMode
-    ) {
-
-        investigate(text);
-
-        return;
-
-    }
-
-
-    showToast(
-        "Choose an issue or request human support."
-    );
-
+    investigate(text);
 }
 
+async function investigate(reference) {
+    showTyping();
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/v1/reconcile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: reference, mode: investigationMode })
+        });
 
-/* =========================================================
-   INVESTIGATION RESPONSE
-========================================================= */
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        hideTyping();
+        renderApiResponse(data);
+    } catch (e) {
+        hideTyping();
+        addMessage(`⚠ Unable to reach SETU backend (${e.message}). Please ensure backend is running at ${BACKEND_URL}.`, "agent");
+    }
+}
 
-const BACKEND_URL = "http://127.0.0.1:5000";
+function renderApiResponse(data) {
+    if (data.response_type === 'HUMAN_HANDOFF') {
+        const cardHTML = `
+        <div style="border:1px solid var(--coral);border-radius:12px;overflow:hidden;margin-top:6px;background:white;box-shadow:var(--shadow-sm);">
+            <div style="background:var(--coral-soft);padding:12px 14px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:16px;">📞</span>
+                <strong style="color:var(--text);font-size:13px;font-family:'Sora',sans-serif;">Support Connection</strong>
+            </div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+                <p style="font-size:13px;color:var(--text);line-height:1.5;margin:0;">${escapeAndFormat(data.message)}</p>
+                <button onclick="startAgentSupport()" style="display:inline-block;padding:9px 15px;background:var(--midnight);color:white;border:none;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;width:fit-content;">Request Agent Callback →</button>
+            </div>
+        </div>`;
+        addRawBotMessage(cardHTML);
+    } else if (data.response_type === 'FINOPS_ESCALATION_JSON' || data.payload) {
+        const payload = data.payload || {};
+        const inv = payload.investigation_summary || {};
+        const fin = payload.financial_audit || {};
+        const tier = payload.escalation_tier || 'TIER_1_RECON_OPS';
 
-function addRawHTMLMessage(html, sender) {
+        const cardHTML = `
+        <div style="border:1px solid var(--danger);border-radius:14px;overflow:hidden;margin-top:8px;background:white;box-shadow:var(--shadow-sm);">
+            <div style="background:#FDF2F2;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #F87171;">
+                <span style="font-size:16px;">⚠️</span>
+                <strong style="color:var(--danger);font-size:13px;font-family:'Sora',sans-serif;">FinOps Escalation Required</strong>
+                <span style="margin-left:auto;font-size:10px;background:var(--danger);color:white;padding:3px 8px;border-radius:6px;font-weight:700;">${escapeAndFormat(tier)}</span>
+            </div>
+            <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div style="background:var(--surface-soft);border-radius:10px;padding:10px 12px;">
+                        <span style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.6px;display:block;font-weight:700;">Order ID</span>
+                        <strong style="font-size:12px;font-family:monospace;color:var(--text);">${escapeAndFormat(inv.order_id || 'N/A')}</strong>
+                    </div>
+                    <div style="background:var(--surface-soft);border-radius:10px;padding:10px 12px;">
+                        <span style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.6px;display:block;font-weight:700;">Payment ID</span>
+                        <strong style="font-size:12px;font-family:monospace;color:var(--text);">${escapeAndFormat(inv.payment_id || 'N/A')}</strong>
+                    </div>
+                </div>
+                <div style="background:#FFF8F8;border-left:3px solid var(--danger);padding:10px 12px;border-radius:0 8px 8px 0;">
+                    <span style="font-size:10px;color:var(--danger);font-weight:800;text-transform:uppercase;display:block;margin-bottom:2px;">Root Cause (${escapeAndFormat(inv.failure_stage || 'DISCREPANCY')})</span>
+                    <p style="font-size:12px;color:var(--text);margin:0;line-height:1.5;">${escapeAndFormat(inv.root_cause || 'Data lineage issue detected.')}</p>
+                </div>
+                ${fin.gross_amount !== undefined ? `
+                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:6px;background:var(--surface-soft);padding:10px;border-radius:10px;text-align:center;">
+                    <div><span style="font-size:9px;color:var(--text-soft);display:block;">Gross</span><strong style="font-size:11px;">₹${fin.gross_amount}</strong></div>
+                    <div><span style="font-size:9px;color:var(--text-soft);display:block;">MDR Fee</span><strong style="font-size:11px;">₹${fin.mdr_fee}</strong></div>
+                    <div><span style="font-size:9px;color:var(--text-soft);display:block;">GST 18%</span><strong style="font-size:11px;">₹${fin.gst_18pct}</strong></div>
+                    <div><span style="font-size:9px;color:var(--text-soft);display:block;">Net Payout</span><strong style="font-size:11px;color:var(--success);">₹${fin.reported_net}</strong></div>
+                </div>` : ''}
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:10px 12px;border-radius:10px;">
+                    <span style="font-size:10px;color:#1E40AF;font-weight:800;text-transform:uppercase;display:block;margin-bottom:2px;">Recommended FinOps Action</span>
+                    <p style="font-size:12px;color:#1E3A8A;margin:0;line-height:1.5;">${escapeAndFormat(payload.recommended_action || 'Inspect in nodal ledger.')}</p>
+                </div>
+            </div>
+        </div>`;
+        addRawBotMessage(cardHTML);
+    } else {
+        addMessage(data.message || 'No details found for this query.', 'agent');
+    }
+}
+
+function addRawBotMessage(htmlContent) {
+    const row = document.createElement("div");
+    row.className = "message-row agent";
+    const bubble = document.createElement("div");
+    bubble.className = "message agent-message";
+    bubble.innerHTML = htmlContent;
+
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+    meta.textContent = "SETU Support";
+    bubble.appendChild(meta);
+
+    row.appendChild(bubble);
+    messages.insertBefore(row, typing);
+    scrollToBottom();
+}
+
+function createSupportTicket(issue) {
+    showTyping();
+    setTimeout(() => {
+        hideTyping();
+        const ticket = generateTicketNumber();
+        const callback = getCallbackWindow();
+
+        const row = document.createElement("div");
+        row.className = "message-row agent";
+
+        const bubble = document.createElement("div");
+        bubble.className = "message agent-message";
+
+        bubble.innerHTML = `
+            Thanks — I've captured the issue and prepared a request for the support team.
+            <div class="ticket-card">
+                <div class="ticket-label">Support ticket</div>
+                <div class="ticket-number">${ticket}</div>
+                <div class="ticket-divider"></div>
+                <div class="ticket-info">
+                    <div>Callback window<strong>${callback}</strong></div>
+                    <div>Status<strong>Assigned</strong></div>
+                </div>
+            </div>
+        `;
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+        meta.textContent = "SETU Support · Ticket created";
+        bubble.appendChild(meta);
+
+        row.appendChild(bubble);
+        messages.insertBefore(row, typing);
+
+        addMessage("Keep your ticket number available. You can continue sending additional details here while the support request is open.", "agent");
+        waitingForAgentIssue = false;
+        setInputState("Add more details to your support request...", "Your support ticket is active.");
+        scrollToBottom();
+    }, 900);
+}
+
+function generateTicketNumber() {
+    return `SETU-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function getCallbackWindow() {
+    const windows = ["Within 30–45 minutes", "Today, within 1–2 hours", "Today, within 2–4 hours"];
+    return windows[Math.floor(Math.random() * windows.length)];
+}
+
+function addMessage(text, sender) {
     const row = document.createElement("div");
     row.className = `message-row ${sender}`;
+
     const bubble = document.createElement("div");
     bubble.className = sender === "user" ? "message user-message" : "message agent-message";
-    bubble.innerHTML = html;
+    bubble.innerHTML = escapeAndFormat(text);
+
     const meta = document.createElement("div");
     meta.className = "message-meta";
     meta.textContent = sender === "user" ? "You · Just now" : "SETU Support";
+
     bubble.appendChild(meta);
     row.appendChild(bubble);
     messages.insertBefore(row, typing);
-    messages.scrollTop = messages.scrollHeight;
+    scrollToBottom();
 }
 
-function investigate(reference) {
-    showTyping();
-    fetch(`${BACKEND_URL}/api/v1/reconcile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: reference })
-    }).then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-    }).then(data => {
-        hideTyping();
-        if (data.response_type === 'HUMAN_HANDOFF') {
-             const cardHTML = `
-               <div style="border:1px solid #c084fc;border-radius:8px;overflow:hidden;margin-top:6px;background:white;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                 <div style="background:#faf5ff;padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e9d5ff;">
-                   <span style="font-size:18px;">🎧</span>
-                   <strong style="color:#7e22ce;font-size:13px;">Support Connection</strong>
-                 </div>
-                 <div style="padding:14px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;">
-                   <p style="font-size:12px;color:#111827;line-height:1.5;margin-bottom:4px;">${escapeAndFormat(data.message)}</p>
-                   <a href="mailto:support@settleassist.com" style="display:inline-block;padding:10px 16px;background:#9333ea;color:white;text-decoration:none;font-size:12px;font-weight:600;border-radius:8px;transition:0.2s;">Contact Support Team</a>
-                 </div>
-               </div>`;
-             addRawHTMLMessage(cardHTML, "agent");
-        } else if (data.payload) {
-             const inv = data.payload.investigation_summary || {};
-             const fin = data.payload.financial_audit || {};
-             const cardHTML = `
-               <div style="border:1px solid #FF5C5C;border-radius:8px;overflow:hidden;margin-top:6px;background:white;">
-                 <div style="background:#FFF0F0;padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #fecaca;">
-                   <span style="font-size:16px;">⚠️</span>
-                   <strong style="color:#E74747;font-size:13px;">FinOps Escalation Required</strong>
-                   <span style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:600;">${escapeAndFormat(data.payload.escalation_tier || '')}</span>
-                 </div>
-                 <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                     <div style="background:#F1F2EE;border-radius:8px;padding:10px;">
-                       <span style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;display:block;">Order ID</span>
-                       <strong style="font-size:11px;font-family:monospace;">${escapeAndFormat(inv.order_id || 'N/A')}</strong>
-                     </div>
-                     <div style="background:#F1F2EE;border-radius:8px;padding:10px;">
-                       <span style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;display:block;">Payment ID</span>
-                       <strong style="font-size:11px;font-family:monospace;">${escapeAndFormat(inv.payment_id || 'N/A')}</strong>
-                     </div>
-                   </div>
-                   <div style="background:#F1F2EE;border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Failure Stage</span>
-                     <span style="font-size:11px;font-weight:600;color:#f59e0b;">${escapeAndFormat(inv.failure_stage || 'UNKNOWN')}</span>
-                   </div>
-                   <div style="background:#F1F2EE;border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Root Cause</span>
-                     <span style="font-size:11px;line-height:1.5;">${escapeAndFormat(inv.root_cause || data.payload.investigation_summary?.root_cause || 'See audit log')}</span>
-                   </div>
-                   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;">
-                     <span style="font-size:9px;color:#3b82f6;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;font-weight:700;">Recommended Action</span>
-                     <span style="font-size:11px;line-height:1.5;">${escapeAndFormat(data.payload.recommended_action || 'Contact FinOps team')}</span>
-                   </div>
-                 </div>
-               </div>`;
-             addMessage("Our system has flagged this transaction for specialist review. Here are the details:", "agent");
-             addRawHTMLMessage(cardHTML, "agent");
-        } else if (data.message) {
-             addMessage(data.message, "agent");
-        } else if (data.error) {
-             addMessage(`Error: ${data.error}`, "agent");
-        } else {
-             addMessage(JSON.stringify(data), "agent");
+function escapeAndFormat(text) {
+    if (!text) return "";
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML.replace(/\n/g, "<br>");
+}
+
+function updateActiveNav(mode) {
+    document.querySelectorAll(".nav-button[data-mode]").forEach(button => {
+        button.classList.remove("active");
+        if (button.dataset.mode === mode) {
+            button.classList.add("active");
         }
-    }).catch(e => {
-        hideTyping();
-        addMessage("Sorry, I couldn't reach the backend server. Please make sure it's running.", "agent");
-        console.error("Backend error:", e);
     });
 }
 
-function obsolete_investigate(reference) {
-
-
-    showTyping();
-
-
-    setTimeout(
-        () => {
-
-
-            hideTyping();
-
-
-            let response;
-
-
-            switch (
-                investigationMode
-            ) {
-
-
-                case "general":
-
-                    response =
-                        `Reference received: ${reference}
-
-SETU can trace the evidence chain from:
-
-Payment → Capture → Settlement → Payout → Bank → Ledger
-
-When connected to the backend, the relevant records and evidence will appear here.`;
-
-                    break;
-
-
-                case "amount":
-
-                    response =
-                        `Reference received: ${reference}
-
-The settlement amount should be reconstructed from:
-
-Gross payment
-− processing fees
-− taxes
-± adjustments
-− refunds or reversals
-= expected net settlement
-
-A difference should only be reported after legitimate deductions are checked.`;
-
-                    break;
-
-
-                case "bank":
-
-                    response =
-                        `Reference received: ${reference}
-
-SETU will trace:
-
-Transaction → Settlement batch → Payout → Bank credit
-
-The absence of a one-to-one bank transaction does not necessarily mean settlement failed. The payment may belong to an aggregated payout.`;
-
-                    break;
-
-
-                case "delay":
-
-                    response =
-                        `Reference received: ${reference}
-
-SETU will compare:
-
-• Event time
-• Capture time
-• Expected settlement date
-• Settlement processing time
-• Payout timing
-• Bank observation
-
-This helps distinguish an actual delay from evidence that is not yet available.`;
-
-                    break;
-
-            }
-
-
-            addMessage(
-                response,
-                "agent"
-            );
-
-
-        },
-        850
-    );
-
+function setInputState(placeholder, context) {
+    input.placeholder = placeholder;
+    inputContext.textContent = context;
 }
-
-
-/* =========================================================
-   CREATE TICKET
-========================================================= */
-
-function createSupportTicket(issue) {
-
-
-    showTyping();
-
-
-    setTimeout(
-        () => {
-
-
-            hideTyping();
-
-
-            const ticket =
-                generateTicketNumber();
-
-
-            const callback =
-                getCallbackWindow();
-
-
-            const row =
-                document.createElement("div");
-
-
-            row.className =
-                "message-row";
-
-
-            const bubble =
-                document.createElement("div");
-
-
-            bubble.className =
-                "message agent-message";
-
-
-            bubble.innerHTML = `
-
-                Thanks — I've captured the issue and prepared a request for the support team.
-
-                <div class="ticket-card">
-
-                    <div class="ticket-label">
-
-                        Support ticket
-
-                    </div>
-
-                    <div class="ticket-number">
-
-                        ${ticket}
-
-                    </div>
-
-                    <div class="ticket-divider"></div>
-
-                    <div class="ticket-info">
-
-                        <div>
-
-                            Callback window
-
-                            <strong>
-
-                                ${callback}
-
-                            </strong>
-
-                        </div>
-
-                        <div>
-
-                            Status
-
-                            <strong>
-
-                                Assigned
-
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            `;
-
-
-            const meta =
-                document.createElement("div");
-
-
-            meta.className =
-                "message-meta";
-
-
-            meta.textContent =
-                "SETU Support · Ticket created";
-
-
-            bubble.appendChild(meta);
-
-
-            row.appendChild(bubble);
-
-
-            messages.insertBefore(
-                row,
-                typing
-            );
-
-
-            addMessage(
-                `Keep your ticket number available. You can continue sending additional details here while the support request is open.`,
-                "agent"
-            );
-
-
-            waitingForAgentIssue =
-                false;
-
-
-            setInputState(
-                "Add more details to your support request...",
-                "Your support ticket is active."
-            );
-
-
-            scrollToBottom();
-
-
-        },
-        1100
-    );
-
-}
-
-
-/* =========================================================
-   TICKET
-========================================================= */
-
-function generateTicketNumber() {
-
-
-    const number =
-        Math.floor(
-            100000 +
-            Math.random() *
-            900000
-        );
-
-
-    return `SETU-${number}`;
-
-}
-
-
-/* =========================================================
-   CALLBACK
-========================================================= */
-
-function getCallbackWindow() {
-
-
-    const windows = [
-
-        "Within 30–45 minutes",
-
-        "Today, within 1–2 hours",
-
-        "Today, within 2–4 hours"
-
-    ];
-
-
-    return windows[
-        Math.floor(
-            Math.random() *
-            windows.length
-        )
-    ];
-
-}
-
-
-/* =========================================================
-   MESSAGE
-========================================================= */
-
-function addMessage(
-    text,
-    sender
-) {
-
-
-    const row =
-        document.createElement("div");
-
-
-    row.className =
-        `message-row ${sender}`;
-
-
-    const bubble =
-        document.createElement("div");
-
-
-    bubble.className =
-        sender === "user"
-            ? "message user-message"
-            : "message agent-message";
-
-
-    bubble.innerHTML =
-        escapeAndFormat(text);
-
-
-    const meta =
-        document.createElement("div");
-
-
-    meta.className =
-        "message-meta";
-
-
-    meta.textContent =
-        sender === "user"
-            ? "You · Just now"
-            : "SETU Support";
-
-
-    bubble.appendChild(meta);
-
-
-    row.appendChild(bubble);
-
-
-    messages.insertBefore(
-        row,
-        typing
-    );
-
-
-    scrollToBottom();
-
-}
-
-
-/* =========================================================
-   SAFE HTML
-========================================================= */
-
-function escapeAndFormat(text) {
-
-
-    const div =
-        document.createElement("div");
-
-
-    div.textContent =
-        text;
-
-
-    return div.innerHTML.replace(
-        /\n/g,
-        "<br>"
-    );
-
-}
-
-
-/* =========================================================
-   ACTIVE NAV
-========================================================= */
-
-function updateActiveNav(mode) {
-
-
-    document
-        .querySelectorAll(
-            ".nav-button[data-mode]"
-        )
-        .forEach(
-            button => {
-
-
-                button.classList.remove(
-                    "active"
-                );
-
-
-                if (
-                    button.dataset.mode === mode
-                ) {
-
-                    button.classList.add(
-                        "active"
-                    );
-
-                }
-
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   INPUT
-========================================================= */
-
-function setInputState(
-    placeholder,
-    context
-) {
-
-
-    input.placeholder =
-        placeholder;
-
-
-    inputContext.textContent =
-        context;
-
-}
-
-
-/* =========================================================
-   TYPING
-========================================================= */
 
 function showTyping() {
-
-
-    typing.classList.add(
-        "active"
-    );
-
-
+    typing.classList.add("active");
     scrollToBottom();
-
 }
-
 
 function hideTyping() {
-
-
-    typing.classList.remove(
-        "active"
-    );
-
+    typing.classList.remove("active");
 }
-
-
-/* =========================================================
-   CONTACT MODAL
-========================================================= */
 
 function openContactModal() {
-
-
-    contactModal.classList.add(
-        "active"
-    );
-
+    contactModal.classList.add("active");
 }
-
 
 function closeContactModal() {
-
-
-    contactModal.classList.remove(
-        "active"
-    );
-
+    contactModal.classList.remove("active");
 }
-
 
 function startAgentFromModal() {
-
-
     closeContactModal();
-
     startAgentSupport();
-
 }
 
-
-contactModal.addEventListener(
-    "click",
-    event => {
-
-
-        if (
-            event.target === contactModal
-        ) {
-
-            closeContactModal();
-
-        }
-
-
+contactModal.addEventListener("click", event => {
+    if (event.target === contactModal) {
+        closeContactModal();
     }
-);
-
-
-/* =========================================================
-   NEW CONVERSATION
-========================================================= */
+});
 
 function newConversation() {
+    investigationMode = null;
+    supportMode = false;
+    waitingForAgentIssue = false;
 
+    document.querySelectorAll(".message-row").forEach(row => row.remove());
+    flowGrid.style.display = "grid";
 
-    investigationMode =
-        null;
+    agentName.textContent = "Anaya";
+    agentRole.textContent = "Settlement Intelligence";
 
+    updateActiveNav("general");
+    setInputState("Choose an issue to begin...", "Choose an investigation type or request human support.");
 
-    supportMode =
-        false;
-
-
-    waitingForAgentIssue =
-        false;
-
-
-    document
-        .querySelectorAll(
-            ".message-row"
-        )
-        .forEach(
-            row =>
-                row.remove()
-        );
-
-
-    flowGrid.style.display =
-        "grid";
-
-
-    agentName.textContent =
-        "Anaya";
-
-
-    agentRole.textContent =
-        "Settlement Intelligence";
-
-
-    updateActiveNav(
-        "general"
-    );
-
-
-    setInputState(
-        "Choose an issue to begin...",
-        "Choose an investigation type or request human support."
-    );
-
-
-    addMessage(
-        `Hi, I'm Anaya.
-
-Choose what you want to investigate, or request human support if you need an agent.`,
-        "agent"
-    );
-
-
-    showToast(
-        "Conversation restarted"
-    );
-
+    addMessage("Hi, I'm Anaya.\n\nChoose what you want to investigate, or request human support if you need an agent.", "agent");
+    showToast("Conversation restarted");
 }
-
-
-/* =========================================================
-   SCROLL
-========================================================= */
 
 function scrollToBottom() {
-
-
-    setTimeout(
-        () => {
-
-
-            messages.scrollTo({
-
-                top:
-                    messages.scrollHeight,
-
-                behavior:
-                    "smooth"
-
-            });
-
-
-        },
-        25
-    );
-
+    setTimeout(() => {
+        messages.scrollTo({
+            top: messages.scrollHeight,
+            behavior: "smooth"
+        });
+    }, 25);
 }
-
-
-/* =========================================================
-   TOAST
-========================================================= */
 
 function showToast(message) {
-
-
-    toast.textContent =
-        message;
-
-
-    toast.classList.add(
-        "show"
-    );
-
-
-    setTimeout(
-        () => {
-
-
-            toast.classList.remove(
-                "show"
-            );
-
-
-        },
-        2500
-    );
-
+    toast.textContent = message;
+    toast.classList.add("show");
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2500);
 }
 
+// ─── API KEY MANAGEMENT ──────────────────────────────────
+function openApiKeyModal() {
+    const modal = document.getElementById('apiKeyModal');
+    modal.classList.add('active');
+    document.getElementById('apiKeyInput').focus();
+}
+
+function closeApiKeyModal() {
+    document.getElementById('apiKeyModal').classList.remove('active');
+}
+
+async function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    const status = document.getElementById('apiKeyStatus');
+    if (!key) {
+        status.textContent = '⚠ Please enter a valid API key.';
+        status.style.color = 'var(--danger)';
+        return;
+    }
+    status.textContent = 'Saving key...';
+    try {
+        const resp = await fetch(`${BACKEND_URL}/api/v1/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: key })
+        });
+        const data = await resp.json();
+        status.textContent = '✓ ' + data.message;
+        status.style.color = 'var(--success)';
+        updateEngineStatus(true);
+        document.getElementById('apiKeyInput').value = '';
+        setTimeout(closeApiKeyModal, 1500);
+    } catch (e) {
+        status.textContent = '✗ Failed to connect to SETU backend.';
+        status.style.color = 'var(--danger)';
+    }
+}
+
+async function clearApiKey() {
+    const status = document.getElementById('apiKeyStatus');
+    status.textContent = 'Clearing key...';
+    try {
+        const resp = await fetch(`${BACKEND_URL}/api/v1/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: '' })
+        });
+        const data = await resp.json();
+        status.textContent = '✓ ' + data.message;
+        status.style.color = 'var(--text-soft)';
+        updateEngineStatus(false);
+    } catch (e) {
+        status.textContent = '✗ Failed to connect to SETU backend.';
+        status.style.color = 'var(--danger)';
+    }
+}
+
+function updateEngineStatus(aiActive) {
+    const badge = document.getElementById('engineBadge');
+    if (!badge) return;
+    badge.textContent = aiActive ? '✦ Gemini AI Active' : '⚙ Deterministic Engine';
+}
+
+async function loadSampleOrders() {
+    try {
+        const resp = await fetch(`${BACKEND_URL}/api/v1/health`);
+        if (resp.ok) {
+            const configResp = await fetch(`${BACKEND_URL}/api/v1/config`);
+            if (configResp.ok) {
+                const cfg = await configResp.json();
+                updateEngineStatus(cfg.ai_active);
+            }
+            const introP = document.querySelector('.intro p');
+            if (introP) {
+                introP.innerHTML = `Start with what you know. A transaction ID, payment reference, settlement reference or payout ID is enough to begin tracing.<br><small style="color:var(--text-light);font-size:11px;margin-top:6px;display:block;">Try sample order: <code style="background:rgba(117,112,140,.15);padding:2px 7px;border-radius:5px;font-family:monospace;color:var(--midnight);font-weight:700;">order_d2c_581852</code></small>`;
+            }
+        }
+    } catch (e) {}
+}
+
+loadSampleOrders();
 
 </script>
 
+
+
+<!-- =====================================================
+     API KEY MODAL
+===================================================== -->
+<div id="apiKeyModal" class="modal-overlay">
+  <div class="contact-modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div>
+        <h2>Gemini AI Settings</h2>
+        <p>Enter your Gemini API key to enable AI-powered natural responses. Without a key, SETU uses the deterministic reconciliation engine.</p>
+      </div>
+      <button class="close-modal" onclick="closeApiKeyModal()">×</button>
+    </div>
+    <div style="padding:18px 0 0;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:0.5px;">GEMINI API KEY</label>
+        <input
+          type="password"
+          id="apiKeyInput"
+          placeholder="AIzaSy..."
+          style="padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;outline:none;font-family:monospace;background:var(--surface);color:var(--text);width:100%;"
+        />
+        <span style="font-size:11px;color:var(--text-light);">Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--coral);font-weight:700;text-decoration:none;">aistudio.google.com</a></span>
+      </div>
+      <div id="apiKeyStatus" style="font-size:12px;color:var(--text-soft);min-height:18px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="saveApiKey()" style="flex:1;padding:11px;background:linear-gradient(145deg, #75708C, #5B5A75);color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;">Save Key</button>
+        <button onclick="clearApiKey()" style="padding:11px 16px;border:1px solid var(--border);background:transparent;color:var(--text-soft);border-radius:10px;cursor:pointer;font-size:13px;">Clear Key</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

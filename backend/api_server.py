@@ -185,8 +185,27 @@ class FintechAPIServer(BaseHTTPRequestHandler):
         if not path:
             path = "/"
 
-        # 1. API Documentation
-        if path in ["/", "/docs"]:
+        # 1. Serve the SETU frontend at "/"
+        if path == "/" or path == "/index.html":
+            frontend_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..", "frontend", "index.html"
+            )
+            frontend_path = os.path.normpath(frontend_path)
+            if os.path.exists(frontend_path):
+                with open(frontend_path, "r", encoding="utf-8") as f:
+                    html = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(html.encode("utf-8"))
+            else:
+                self._send_json(404, {"error": f"Frontend not found at: {frontend_path}"})
+            return
+
+        # 2. Swagger / API Documentation
+        if path == "/docs":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self._send_cors_headers()
@@ -265,6 +284,16 @@ class FintechAPIServer(BaseHTTPRequestHandler):
                 self._send_json(500, {"error": str(e)})
             return
 
+        # 7. Config status check: GET /api/v1/config
+        if path == "/api/v1/config":
+            has_key = bool(self.llm_agent.gemini_api_key)
+            self._send_json(200, {
+                "ai_active": has_key,
+                "engine": "Gemini AI" if has_key else "Deterministic FinOps Engine",
+                "message": "Gemini API key is configured." if has_key else "No API key set. Using deterministic engine."
+            })
+            return
+
         self._send_json(404, {"error": f"Endpoint not found: {self.path}"})
 
     def do_POST(self):
@@ -340,10 +369,51 @@ class FintechAPIServer(BaseHTTPRequestHandler):
                 self._send_json(500, {"error": f"CSV sync failed: {str(e)}"})
             return
 
+        # 6. Set/clear Gemini API key at runtime: POST /api/v1/config
+        if path == "/api/v1/config":
+            api_key = data.get("api_key", "").strip()
+            if api_key:
+                self.llm_agent.set_api_key(api_key)
+                # Persist to .env so it survives restarts
+                env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+                persisted = False
+                try:
+                    lines = []
+                    key_written = False
+                    if os.path.exists(env_path):
+                        with open(env_path, "r", encoding="utf-8") as f:
+                            for line in f:
+                                if line.strip().startswith("GEMINI_API_KEY"):
+                                    lines.append(f"GEMINI_API_KEY={api_key}\n")
+                                    key_written = True
+                                else:
+                                    lines.append(line)
+                    if not key_written:
+                        lines.append(f"GEMINI_API_KEY={api_key}\n")
+                    with open(env_path, "w", encoding="utf-8") as f:
+                        f.writelines(lines)
+                    persisted = True
+                except Exception:
+                    pass
+                self._send_json(200, {
+                    "status": "success",
+                    "message": "Gemini API key saved. AI responses are now active.",
+                    "persisted_to_env": persisted,
+                    "ai_active": True
+                })
+            else:
+                self.llm_agent.set_api_key("")
+                self._send_json(200, {
+                    "status": "success",
+                    "message": "Gemini API key cleared. Using deterministic engine.",
+                    "ai_active": False
+                })
+            return
+
         self._send_json(404, {"error": f"Endpoint not found: {self.path}"})
 
     def log_message(self, format, *args):
-        pass
+        print(f"[{self.address_string()}] {format % args}")
 
 
 def start_file_watcher(csv_dir: str, db_path: str, poll_interval: int = 3):

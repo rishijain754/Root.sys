@@ -60,7 +60,7 @@ class ReconciliationOrchestrator:
         Returns a dictionary containing response_type ('MERCHANT_MESSAGE' or 'FINOPS_ESCALATION_JSON'),
         confidence_score, and the formatted payload.
         """
-        curr_time = simulated_current_time or datetime.datetime(2026, 9, 4, 18, 0, 0)
+        curr_time = simulated_current_time or datetime.datetime.now()
         
         # Check for human handoff intent first
         query_lower = query_text.lower()

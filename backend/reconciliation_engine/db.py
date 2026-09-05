@@ -34,11 +34,17 @@ class ReconciliationDB:
         self._ensure_wal_mode()
 
     def _ensure_wal_mode(self):
-        """Enable WAL mode and busy timeout for high-concurrency read/write operations."""
+        """Enable WAL mode, busy timeout, and run checkpoint to recover from any prior crash."""
         if os.path.exists(self.db_path):
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("PRAGMA journal_mode=WAL;")
                 conn.execute("PRAGMA busy_timeout=5000;")
+                conn.execute("PRAGMA synchronous=NORMAL;")
+                # Flush any orphaned WAL frames left by a previous unclean shutdown
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
+                except Exception:
+                    pass
 
     def _get_connection(self, read_only: bool = True) -> sqlite3.Connection:
         """Create connection with row factory and WAL configuration."""
