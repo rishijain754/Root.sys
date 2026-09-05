@@ -128,18 +128,22 @@ class Investigator:
         if settlement_id:
             setl_row = self.db.get_settlement_by_id(settlement_id)
             if setl_row:
-                res.settlement_records.append(setl_row)
-                res.linkage_chain["utr_number"] = setl_row.get("utr_number")
-                
-                if setl_row.get("status") == "FAILED":
-                    res.missing_links.append("SETTLEMENT_BATCH_FAILED")
-                    res.lifecycle_stage = "FAILED_SETTLEMENT"
-                elif not setl_row.get("utr_number"):
-                    res.missing_links.append("MISSING_BANK_UTR")
-                    res.lifecycle_stage = "BATCHED"
+                if primary_gw and setl_row.get("merchant_id") != primary_gw.get("merchant_id"):
+                    res.missing_links.append("BROKEN_SETTLEMENT_FK")
+                    res.lifecycle_stage = "BROKEN_LINK"
                 else:
-                    if not res.is_refunded:
-                        res.lifecycle_stage = "SETTLED"
+                    res.settlement_records.append(setl_row)
+                    res.linkage_chain["utr_number"] = setl_row.get("utr_number")
+                    
+                    if setl_row.get("status") == "FAILED":
+                        res.missing_links.append("SETTLEMENT_BATCH_FAILED")
+                        res.lifecycle_stage = "FAILED_SETTLEMENT"
+                    elif not setl_row.get("utr_number"):
+                        res.missing_links.append("MISSING_BANK_UTR")
+                        res.lifecycle_stage = "BATCHED"
+                    else:
+                        if not res.is_refunded:
+                            res.lifecycle_stage = "SETTLED"
             else:
                 # settlement_id was present in gateway table but does NOT exist in bank_settlements
                 res.missing_links.append("BROKEN_SETTLEMENT_FK")
@@ -152,6 +156,10 @@ class Investigator:
         # Step 3: Fetch Ledger Entries
         if payment_id:
             led_rows = self.db.get_ledger_by_payment_id(payment_id)
+            # Filter out collisions from flawed test data
+            if primary_gw:
+                gw_merchant = primary_gw.get("merchant_id")
+                led_rows = [r for r in led_rows if r.get("merchant_id") == gw_merchant]
             res.ledger_records = led_rows
             if not led_rows and gw_status == "captured" and setl_row and setl_row.get("status") == "SETTLED":
                 res.missing_links.append("MISSING_LEDGER_ENTRY")
