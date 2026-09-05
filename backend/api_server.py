@@ -162,13 +162,6 @@ class FintechAPIServer(BaseHTTPRequestHandler):
     llm_agent: Optional[SettlementLLMAgent] = None
     csv_dir: str = "../Test_data"
 
-    @classmethod
-    def _ensure_init(cls):
-        if cls.orchestrator is None:
-            cls.orchestrator = ReconciliationOrchestrator()
-        if cls.llm_agent is None:
-            cls.llm_agent = SettlementLLMAgent(orchestrator=cls.orchestrator)
-
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
@@ -187,7 +180,6 @@ class FintechAPIServer(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        self._ensure_init()
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
         if not path:
@@ -305,7 +297,6 @@ class FintechAPIServer(BaseHTTPRequestHandler):
         self._send_json(404, {"error": f"Endpoint not found: {self.path}"})
 
     def do_POST(self):
-        self._ensure_init()
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
 

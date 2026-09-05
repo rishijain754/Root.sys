@@ -29,10 +29,9 @@ class ReconciliationDB:
         "gst_deduction": "gst_tax_18pct_inr",
     }
 
-    def __init__(self, db_path: str = "razorpay_reconciliation.sqlite"):
+    def __init__(self, db_path: str):
         self.db_path = db_path
-        if not os.environ.get("VERCEL"):
-            self._ensure_wal_mode()
+        self._ensure_wal_mode()
 
     def _ensure_wal_mode(self):
         """Enable WAL mode, busy timeout, and run checkpoint to recover from any prior crash."""
